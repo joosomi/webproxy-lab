@@ -48,3 +48,6 @@ csapp.o: csapp.c
 
 echo.o: echo.c
 	$(CC) $(CFLAGS) -c echo.c
+
+clean:
+	rm -f *.o echoclient echoserver *~
