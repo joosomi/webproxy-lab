@@ -989,7 +989,7 @@ int open_clientfd(char *hostname, char *port) {
     /* 잠재적인 서버 주소 목록 가져옴*/
     /* Get a list of potential server addresses */
     memset(&hints, 0, sizeof(struct addrinfo));
-    hints.ai_socktype = SOCK_STREAM;  /* Open a connection, 연결을 위한 소켓 타입 지정 */
+    hints.ai_socktype = SOCK_STREAM;  /* Open a TCP connection, 연결을 위한 소켓 타입 지정 */
     hints.ai_flags = AI_NUMERICSERV;  /* ... using a numeric port arg. 숫자 포트 인자 사용 */
     hints.ai_flags |= AI_ADDRCONFIG;  /* Recommended for connections, 연결에 권장되는 플래그 설정 */
     if ((rc = getaddrinfo(hostname, port, &hints, &listp)) != 0) {
@@ -998,16 +998,17 @@ int open_clientfd(char *hostname, char *port) {
     }
     
     //연결 가능한 주소 찾아서 순회
+    //Socket()과 connect()성공할 때까지 linked list 탐색
     /* Walk the list for one that we can successfully connect to */
     for (p = listp; p; p = p->ai_next) {
         /* Create a socket descriptor 소켓 디스크립터 생성 */
         if ((clientfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) 
             continue; /* Socket failed, try the next, 소켓 생성 실패, 다음 주소 시도 */
 
-        /* Connect to the server 서버에 연결 시도*/
+        /* Connect to the server. Socket() 성공 후 서버에 연결 시도*/
         if (connect(clientfd, p->ai_addr, p->ai_addrlen) != -1) 
             break; /* Success 성공 시 반복 중단*/
-        if (close(clientfd) < 0) { /* Connect failed, try another, 연결 실패 다른 주소 시도 */  //line:netp:openclientfd:closefd
+        if (close(clientfd) < 0) { /* Connect failed, try another, 연결 실패 다른 주소 시도 */ 
             fprintf(stderr, "open_clientfd: close failed: %s\n", strerror(errno));
             return -1; //오류시 -1 반환
         } 
@@ -1015,7 +1016,7 @@ int open_clientfd(char *hostname, char *port) {
 
     /* Clean up */
     freeaddrinfo(listp);
-    if (!p) /* All connects failed */
+    if (!p) /* All connects failed -> -1 리턴*/
         return -1;
     else    /* The last connect succeeded */
         return clientfd;
@@ -1045,7 +1046,8 @@ int open_listenfd(char *port)
         fprintf(stderr, "getaddrinfo failed (port %s): %s\n", port, gai_strerror(rc));
         return -2;
     }
-
+    
+    //socket()과 bind()가 성공할 떄까지 링크드리스트 탐색
     //바인딩할 수 있는 주소를 리스트에서 찾음
     /* Walk the list for one that we can bind to */
     for (p = listp; p; p = p->ai_next) {
@@ -1053,7 +1055,7 @@ int open_listenfd(char *port)
         if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) 
             continue;  /* Socket failed, try the next, 소켓 생성 실패, 다음 주소로 시도 */
 
-        //주소가 이미 사용중입니다 오류 방지
+        //주소가 이미 사용중입니다 오류 방지 - SO_REUSEADDR => 주소 재사용 가능하게 함
         /* Eliminates "Address already in use" error from bind */
         setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR,    //line:netp:csapp:setsockopt
                    (const void *)&optval , sizeof(int));

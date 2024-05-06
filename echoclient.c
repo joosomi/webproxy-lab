@@ -22,6 +22,7 @@ int main(int argc, char **argv) {
 
     //표준 입력에서 텍스트 줄을 반복적으로 읽음
     //표준 입력 Stdin에서 MAXLINE만큼 바이트를 가져와 buf에 저장
+    //fgets가 EOF 표준 입력을 만나면 종료 (사용자가 Ctrl + D를 눌렀거나 파일로 텍스트 줄을 모두 소진)
     while (Fgets(buf, MAXLINE, stdin) != NULL) {
         Rio_writen(clientfd, buf, strlen(buf)); //사용자 입력을 서버에 전송
         Rio_readlineb(&rio, buf, MAXLINE); //서버로부터 응답을 받음

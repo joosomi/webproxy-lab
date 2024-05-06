@@ -44,10 +44,12 @@ typedef struct sockaddr SA;
 /* $begin rio_t */
 #define RIO_BUFSIZE 8192
 typedef struct {
-    int rio_fd;                /* Descriptor for this internal buf */
-    int rio_cnt;               /* Unread bytes in internal buf */
-    char *rio_bufptr;          /* Next unread byte in internal buf */
-    char rio_buf[RIO_BUFSIZE]; /* Internal buffer */
+    int rio_fd;                /* Descriptor for this internal buf 내부 버퍼와 연결된 디스크립터*/
+    int rio_cnt;               /* Unread bytes in internal buf 내부 버퍼에 아직 읽히지 않은 바이트 수
+                                -> 사용할 수 있는 데이터의 양*/
+    char *rio_bufptr;          /* Next unread byte in internal buf
+                                내부 버퍼 내에서 다음에 읽을 바이트를 가리키는 포인터. */
+    char rio_buf[RIO_BUFSIZE]; /* Internal buffer 실제 내부 버퍼 - 현재 8192 바이트(데이터를 임시로 저장하는 공간으로 사용)*/
 } rio_t;
 /* $end rio_t */
 
