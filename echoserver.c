@@ -19,7 +19,8 @@ int main(int argc, char **argv) {
     listenfd = Open_listenfd(argv[1]);
 
     while (1) {//무한 루프를 통해 연속적으로 클라이언트의 연결을 받아들임
-        clientlen = sizeof(struct sockaddr_storage); 
+        clientlen = sizeof(struct sockaddr_storage); //초기화
+
         connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); //클라이언트로부터의 연결 요청 수락
 
         //클라이언트 주소 정보를 기반으로 호스트 이름과 포트 번호 알아냄

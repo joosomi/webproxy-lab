@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
     //fgets가 EOF 표준 입력을 만나면 종료 (사용자가 Ctrl + D를 눌렀거나 파일로 텍스트 줄을 모두 소진)
     while (Fgets(buf, MAXLINE, stdin) != NULL) {
         Rio_writen(clientfd, buf, strlen(buf)); //사용자 입력을 서버에 전송
-        Rio_readlineb(&rio, buf, MAXLINE); //서버로부터 응답을 받음
+        Rio_readlineb(&rio, buf, MAXLINE); //서버로부터 응답을 받음 
         Fputs(buf, stdout); //받은 응답을 표준 출력으로 출력
     }
     Close(clientfd); //클라이언트 소켓을 닫음

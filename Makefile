@@ -29,11 +29,13 @@
 
 
 CC = gcc
-CFLAGS = -O2 -Wall -I .
+CFLAGS = -O2 -Wall -I . 
+#컴파일 옵션 -Wall: 모든 경고 메시지를 활성화하여 보여줌
+#-I . : 현재 디렉토리를 include 파일 경로에 추가
 
 # This flag includes the Pthreads library on a Linux box.
 # Others systems will probably require something different.
-LIB = -lpthread
+LIB = -lpthread 
 
 all: echoclient echoserver
 
