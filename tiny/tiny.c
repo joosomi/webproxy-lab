@@ -75,8 +75,12 @@ void doit(int fd) {
   // 일치하면 0 return 
 
   //요청 메소드가 GET이 아닌 경우 -> 클라이언트에게 501 에러
+  
+  /*숙제 11.11*/
+  // 요청 Method가 GET과 HEAD가 아니면 종료.
+  //main으로 가서 연결 닫고 다음 요청 기다림
   // if (strcasecmp(method, "GET")) {
-  if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")) {
+  if (!(strcasecmp(method, "GET") == 0 || strcasecmp(method, "HEAD") == 0)) {
     clienterror(fd, method, "501", "Not implemented",
         "Tiny does not implement this method");
         return;
@@ -215,7 +219,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
 //클라이언트의 요청에 따라 변경되지 않고 그대로 전송됨
 
 //파일 이름과 파일 크기를 인자로 받아서 해당 파일을 클라이언트에게 전송
-// void serve_static(int fd, char *filename, int filesize){
+// void serve_static(int fd, char *filename, int filesize, char* method){
 //   int srcfd;
 //   char *srcp, filetype[MAXLINE], buf[MAXBUF];
 
@@ -232,7 +236,10 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
 //   printf("Response headers: \n");
 //   printf("%s", buf);
 
-
+//    if (strcasecmp(method, "HEAD")==0) {
+//     return;
+//   }
+  
 //   /*Send response body to client*/
 //   srcfd = Open(filename, O_RDONLY, 0); //요청받은 파일을 읽기 전용 모드(O_RDONLY)로 열기 
   
@@ -247,6 +254,9 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
 // }
 
 
+
+/// 파일의 메모리를 그대로 가상 메모리에 매핑하는 mmap()와 달리
+// 파일의 크기만큼 메모리를 동적 할당 해준 뒤, rio_readn() 사용해서 파일의 데이터를 메모리로 읽어와야 한다.
 
 void serve_static(int fd, char *filename, int filesize, char *method){
   int srcfd;
@@ -272,11 +282,11 @@ void serve_static(int fd, char *filename, int filesize, char *method){
     /*Send response body to client*/
   srcfd = Open(filename, O_RDONLY, 0); //요청받은 파일을 읽기 전용 모드(O_RDONLY)로 열기 
     
-  srcp = (char *)malloc(filesize);
-  Rio_readn(srcfd, srcp, filesize);
-  Close(srcfd); 
-  Rio_writen(fd, srcp, filesize); 
-  free(srcp);
+  srcp = (char *)Malloc(filesize); //파일 크기만큼 메모리를 동적 할당
+  Rio_readn(srcfd, srcp, filesize); //파일 내용을 읽어서 동적할당한 메모리에 값을 저장.
+  Close(srcfd);  //파일 닫음
+  Rio_writen(fd, srcp, filesize);  //해당 메모리에 있는 파일 내용들을 클라이언트에 보낸다.
+  free(srcp); //메모리 해제
   
 }
 
@@ -287,7 +297,7 @@ void serve_static(int fd, char *filename, int filesize, char *method){
 // serve_dynamic
 //동적 내용을 처리하기 위해 웹 서버에서 사용되는 함수
 //CGI 프로그램을 실행하고 그 출력을 클라이언트에게 직접 전송
-void serve_dynamic(int fd, char *filename, char *cgiargs, char *method) {
+void serve_dynamic(int fd, char *filename, char *cgiargs, char* method) {
   char buf[MAXLINE], *emptylist[] = {NULL};
 
   /*Return first part of HTTP response*/
@@ -307,6 +317,9 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method) {
     /*Real server would set all CGI vars here*/ 
     //CGI 프로그램에 전달될 QUERY_STRING 환경 변수 -> cgiargs로 설정
     setenv("QUERY_STRING", cgiargs, 1);
+
+    //요청 메소드를 환경 변수에 추가
+    setenv("REQUEST_METHOD", method, 1);
 
     Dup2(fd, STDOUT_FILENO); /*Redirect stdout to client, 
     CGI 프로세스의 표준 출력을 connfd에 복사 -> CGI 프로세스에서 표준 출력 하면 서버 연결 식별자를 거쳐 클라이언트에 출력됨*/

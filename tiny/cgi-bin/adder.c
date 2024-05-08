@@ -12,6 +12,7 @@ int main(void) {
   int n1 = 0, n2 = 0;
 
   /* Extract the two argumetns*/
+  //서버에서 만들어준 QUERY_STRING 환경 변수
   //QUERY_STRING 환경 변수에서 두 인수 추출 -> 값을 buf에 저장
   if ((buf = getenv("QUERY_STRING")) != NULL) {
     p = strchr(buf, '&'); // buf에서 & 문자의 위치를 찾아 p에 저장
@@ -30,6 +31,9 @@ int main(void) {
     sscanf(p+1, "n2=%d", &n2);
   }
 
+  method = getenv("REQUEST_METHOD");
+
+
   /*Make the response body*/
   sprintf(content, "QUERY_STRING=%s", buf); 
   sprintf(content, "Welcome to add.com: ");
@@ -41,7 +45,12 @@ int main(void) {
   printf("Connedtion: close\r\n");
   printf("Content-length: %d\r\n", (int)strlen(content));
   printf("Content-type: text/html\r\n\r\n");
-  printf("%s", content);
+  
+  // 메소드가 HEAD가 아닐 경우에만 응답 본체 출력
+  if (strcasecmp(method, "HEAD")!=0){
+    printf("%s", content); 
+  }
+
   fflush(stdout);
   exit(0);
 }
