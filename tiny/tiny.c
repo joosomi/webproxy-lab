@@ -72,6 +72,8 @@ void doit(int fd) {
   sscanf(buf, "%s %s %s", method, uri, version); //request line 파싱 -> 메소드, URI, 버전 추출
   
   //strcasecmp(): 대소문자를 구분하지 않고 스트링 비교
+  // 일치하면 0 return 
+
   //요청 메소드가 GET이 아닌 경우 -> 클라이언트에게 501 에러
   // if (strcasecmp(method, "GET")) {
   if (strcasecmp(method, "GET") && strcasecmp(method, "HEAD")) {
@@ -263,19 +265,22 @@ void serve_static(int fd, char *filename, int filesize, char *method){
   printf("Response headers: \n");
   printf("%s", buf);
 
-  if (!strcasecmp(method, "HEAD")) {
+  if (strcasecmp(method, "HEAD")==0) {
     return;
   }
-
-  /*Send response body to client*/
-  srcfd = Open(filename, O_RDONLY, 0); //요청받은 파일을 읽기 전용 모드(O_RDONLY)로 열기 
   
+    /*Send response body to client*/
+  srcfd = Open(filename, O_RDONLY, 0); //요청받은 파일을 읽기 전용 모드(O_RDONLY)로 열기 
+    
   srcp = (char *)malloc(filesize);
   Rio_readn(srcfd, srcp, filesize);
   Close(srcfd); 
   Rio_writen(fd, srcp, filesize); 
   free(srcp);
+  
 }
+
+
 
 
 
@@ -295,9 +300,6 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method) {
   Rio_writen(fd, buf, strlen(buf));
 
 
-  if (!strcasecmp(method, "HEAD")) {
-    return;
-  }
 
   /*Child*/
   //자식 프로세스에서 실행되는 코드
