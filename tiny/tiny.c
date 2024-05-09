@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
     printf("Accepted connection from (%s, %s)\n", hostname, port);
     //클라이언트 통신 처리
     doit(connfd);   // line:netp:tiny:doit 클라이언트와 통신
-    Close(connfd);  // line:netp:tiny:close 통신이 끝나면 연결 종료
+    Close(connfd);  // line:netp:tiny:close 서버 연결 식별자 연결 종료
   }
 }
 
@@ -67,7 +67,10 @@ void doit(int fd) {
   /*Read request line and headers*/
   /*request 라인과 헤더를 읽음*/
   Rio_readinitb(&rio, fd); //RIO 버퍼 초기화 - rio 버퍼와 서버의 connfd를 연결시켜준다.
-  Rio_readlineb(&rio, buf, MAXLINE);  //request 라인 읽음
+  
+  if (!(Rio_readlineb(&rio, buf, MAXLINE))){
+    return;
+  }
   printf("%s", buf);
   sscanf(buf, "%s %s %s", method, uri, version); //request line 파싱 -> 메소드, URI, 버전 추출
   
@@ -101,7 +104,6 @@ void doit(int fd) {
 
   /*Serve static content, 정적 콘텐츠 제공*/
   if (is_static) { 
-
     /*파일이 일반 파일이 아니거나 읽기 권한이 없는 경우 -> 403 에러(웹 페이지를 볼 수있는 권한이 없음)*/
     //S_ISREG(sbuf.st_mode): 파일 모드가 정규 파일을 가맄키는지 ->false 반환하면 정규 파일이 아님(디렉토리나 링크일 수 있음)
     //S_IRUSR :소유자의 읽기 권한, sbuf.st_mode : 권한 비트 -> 해당 권한이 설정되었는지 검사
@@ -161,9 +163,9 @@ void read_requesthdrs(rio_t *rp) {
   Rio_readlineb(rp, buf, MAXLINE); //첫번째 헤더 라인 읽음
   
   //strcmp(): 두 문자열 비교 
-  //헤더의 마지막 줄은 비어있기에 \r\n만 buf에 담겨있으면 while 문 탈출함
+  //HTTP의 헤더 끝까지(루프를 통해 \r\n만 포함된 빈 줄을 만날 떄까지) 데이터 읽어옴
   while(strcmp(buf, "\r\n")) {
-    Rio_readlineb(rp, buf, MAXLINE); // 다음 헤더 라인 읽고 
+    Rio_readlineb(rp, buf, MAXLINE); // 다음 헤더 라인 한줄씩 읽고 
     printf("%s", buf); //출력
   }
   return;
@@ -187,7 +189,7 @@ int parse_uri(char *uri, char *filename, char *cgiargs) {
     //strlen(url)-1 : '\0'를 제외한 문자수 -> 마지막 문자가 /인지 확인 
     //uri가 디렉토리를 가리키는지 체크
     if (uri[strlen(uri)-1] == '/') {
-      strcat(filename, "home.html");  //filename 문자열의 끝에 host.html 문자열 붙임 
+      strcat(filename, "home.html");  //filename 문자열의 끝에 home.html 문자열 붙임 
       //웹 서버가 디렉토리에 대한 요청을 받았을 때 사용자에게 보여줄 기본적인 웹 페이지 설정
       //strcat 함수 -> 두개의 문자열을 연결하는데 사용.
     }
@@ -278,8 +280,7 @@ void serve_static(int fd, char *filename, int filesize, char *method){
   if (strcasecmp(method, "HEAD")==0) {
     return;
   }
-  
-    /*Send response body to client*/
+  /*Send response body to client*/
   srcfd = Open(filename, O_RDONLY, 0); //요청받은 파일을 읽기 전용 모드(O_RDONLY)로 열기 
     
   srcp = (char *)Malloc(filesize); //파일 크기만큼 메모리를 동적 할당
@@ -287,7 +288,6 @@ void serve_static(int fd, char *filename, int filesize, char *method){
   Close(srcfd);  //파일 닫음
   Rio_writen(fd, srcp, filesize);  //해당 메모리에 있는 파일 내용들을 클라이언트에 보낸다.
   free(srcp); //메모리 해제
-  
 }
 
 
@@ -295,7 +295,7 @@ void serve_static(int fd, char *filename, int filesize, char *method){
 
 
 // serve_dynamic
-//동적 내용을 처리하기 위해 웹 서버에서 사용되는 함수
+//동적 콘텐츠을 처리하기 위해 웹 서버에서 사용되는 함수
 //CGI 프로그램을 실행하고 그 출력을 클라이언트에게 직접 전송
 void serve_dynamic(int fd, char *filename, char *cgiargs, char* method) {
   char buf[MAXLINE], *emptylist[] = {NULL};
@@ -342,8 +342,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char* method) {
   
   /*동적 콘텐츠를 제공하기 위해 CGI 프로그램을 별도의 프로세스로 실행하기 위해 
   자식 프로세스는 독립적인 환경에서 CGI 프로그램 실행 -> 그 출력을 클라이언트에게 전송
-  웹 서버의 메인 프로세스는 다른 요청을 처리할 수 있음 
-  부모 프로세스는 자식 */
+  웹 서버의 메인 프로세스는 다른 요청을 처리할 수 있음  */
 
 //Dup2(): 열린 File descriptor를 복제하는 함수
 
